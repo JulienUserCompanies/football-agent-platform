@@ -15,7 +15,7 @@ export default async function DashboardPage() {
 
   const { data: agents } = await supabase
     .from("agents")
-    .select("name, agency, regions, specialisms")
+    .select("name, agency, regions, specialisms, country")
     .order("name");
 
   const rows = agents ?? [];
@@ -28,7 +28,17 @@ export default async function DashboardPage() {
   }
   const agencyEntries = [...byAgency.entries()].sort((a, b) => b[1] - a[1]);
   const agencyCount = agencyEntries.length;
-  const maxAgencyCount = Math.max(1, ...agencyEntries.map(([, n]) => n));
+  const topAgencyEntries = agencyEntries.filter(([a]) => a !== "Independent").slice(0, 8);
+  const maxAgencyCount = Math.max(1, ...topAgencyEntries.map(([, n]) => n));
+
+  const byCountry = new Map<string, number>();
+  for (const a of rows) {
+    const key = a.country ?? "Unknown";
+    byCountry.set(key, (byCountry.get(key) ?? 0) + 1);
+  }
+  const countryEntries = [...byCountry.entries()].sort((a, b) => b[1] - a[1]);
+  const countryCount = countryEntries.length;
+  const maxCountryCount = Math.max(1, ...countryEntries.map(([, n]) => n));
 
   const bySpecialism = new Map<string, number>();
   for (const a of rows) {
@@ -56,8 +66,6 @@ export default async function DashboardPage() {
         .map((s) => `${s.color} ${s.start}deg ${s.end}deg`)
         .join(", ")})`
     : "var(--color-accent-tint)";
-
-  const regionCount = new Set(rows.flatMap((a) => a.regions ?? [])).size;
 
   const initials = (name: string) =>
     name
@@ -90,15 +98,16 @@ export default async function DashboardPage() {
           Find a licensed agent in seconds
         </h2>
         <p className="max-w-xl text-[13.5px] leading-relaxed text-[#C8E3D4]">
-          {agentCount} agents across {agencyCount} agencies and{" "}
-          {regionCount || "—"} region{regionCount === 1 ? "" : "s"}, checked
-          against the FA&rsquo;s public register.
+          {agentCount} agents across {countryCount} countr{countryCount === 1 ? "y" : "ies"} and{" "}
+          {agencyCount} agencies, checked against each country&rsquo;s
+          national federation register.
         </p>
       </div>
 
       {/* stat tiles */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-4">
         <Tile label="Agents listed" value={String(agentCount)} />
+        <Tile label="Countries covered" value={String(countryCount)} />
         <Tile label="Agencies represented" value={String(agencyCount)} />
         <Tile label="Specialisms covered" value={String(specialismEntries.length)} />
       </div>
@@ -106,9 +115,30 @@ export default async function DashboardPage() {
       {/* charts */}
       <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-2xl border border-line bg-surface p-6">
-          <h3 className="mb-5 text-[15px] font-bold">Agents by agency</h3>
+          <h3 className="mb-5 text-[15px] font-bold">Agents by country</h3>
           <div className="flex flex-col gap-3">
-            {agencyEntries.map(([agency, n]) => (
+            {countryEntries.map(([country, n]) => (
+              <div key={country} className="flex items-center gap-3">
+                <div className="w-28 flex-shrink-0 truncate text-[12.5px] text-muted" title={country}>
+                  {country}
+                </div>
+                <div className="h-5 flex-1 overflow-hidden rounded-full bg-accent-tint">
+                  <div
+                    className="h-full rounded-full bg-accent"
+                    style={{ width: `${(n / maxCountryCount) * 100}%` }}
+                  />
+                </div>
+                <div className="w-10 flex-shrink-0 text-right text-[12.5px] font-bold">{n}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-line bg-surface p-6">
+          <h3 className="mb-1 text-[15px] font-bold">Top agencies</h3>
+          <p className="mb-4 text-[12px] text-muted">Independent agents excluded — top 8 by agent count</p>
+          <div className="flex flex-col gap-3">
+            {topAgencyEntries.map(([agency, n]) => (
               <div key={agency} className="flex items-center gap-3">
                 <div className="w-32 flex-shrink-0 truncate text-[12.5px] text-muted" title={agency}>
                   {agency}
@@ -124,7 +154,9 @@ export default async function DashboardPage() {
             ))}
           </div>
         </div>
+      </div>
 
+      <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-2xl border border-line bg-surface p-6">
           <h3 className="mb-5 text-[15px] font-bold">Agents by specialism</h3>
           <div className="flex items-center gap-6">

@@ -19,7 +19,7 @@ export default async function AgentDetailPage({
 
   const { data: agent } = await supabase
     .from("agents")
-    .select("id, slug, name, agency, regions, specialisms, website")
+    .select("id, slug, name, agency, regions, specialisms, website, country")
     .eq("slug", slug)
     .single();
 
@@ -49,7 +49,10 @@ export default async function AgentDetailPage({
           </div>
           <div>
             <h1 className="mb-2 font-display text-2xl font-extrabold">{agent.name}</h1>
-            <div className="mb-2.5 text-sm text-muted">{agent.agency ?? "Independent"}</div>
+            <div className="mb-2.5 text-sm text-muted">
+              {agent.agency ?? "Independent"}
+              {agent.country ? ` · ${agent.country}` : ""}
+            </div>
             <div className="flex flex-wrap gap-2">
               {(agent.regions ?? []).map((r: string) => (
                 <span key={r} className="rounded-full bg-accent-tint px-2.5 py-1 text-xs font-semibold text-accent-dark">
@@ -69,7 +72,7 @@ export default async function AgentDetailPage({
       {/* at a glance */}
       <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Tile label="Agency" value={agent.agency ?? "Independent"} />
-        <Tile label="Region" value={(agent.regions ?? []).join(", ") || "—"} />
+        <Tile label="Country" value={agent.country ?? "—"} />
         <Tile label="Specialism" value={(agent.specialisms ?? [])[0] ?? "—"} />
         <div className="relative overflow-hidden rounded-2xl border border-line bg-surface p-4">
           <div className="mb-1 text-xs text-muted">Licence status</div>
@@ -105,7 +108,7 @@ export default async function AgentDetailPage({
           <dl className="space-y-3 text-sm">
             <Row label="License body" value={verification.license_body} />
             <Row label="License status" value={verification.license_status} />
-            <Row label="FA registration number" value={verification.reg_number ?? "—"} />
+            <Row label="Registration number" value={verification.reg_number ?? "—"} />
             <Row
               label="Authorised to represent minors"
               value={
@@ -135,12 +138,13 @@ export default async function AgentDetailPage({
             </svg>
           </div>
           <h2 className="mb-2 font-display text-lg font-extrabold">
-            License status, FA registration number and minors-authorisation
-            are available to subscribers
+            License status, registration number and minors-authorisation are
+            available to subscribers
           </h2>
           <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-muted">
             Subscribing unlocks this agent&rsquo;s full verification record,
-            re-checked against the FA&rsquo;s public register.
+            re-checked against their national federation&rsquo;s public
+            register.
           </p>
           <div className="flex justify-center gap-3">
             <Link href="/pricing" className="rounded-[10px] bg-accent px-5.5 py-3 text-[14.5px] font-bold text-[#06241a]">

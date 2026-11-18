@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "AgentIndex — find a licensed football agent",
   description:
-    "Find a licensed football agent and know who you're connecting with — cross-checked against the FA's public register.",
+    "Find a licensed football agent and know who you're connecting with — cross-checked against national federation registers across England, Ireland, the Netherlands and Italy.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

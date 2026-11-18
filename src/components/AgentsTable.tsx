@@ -9,6 +9,7 @@ type Agent = {
   agency: string | null;
   regions: string[] | null;
   specialisms: string[] | null;
+  country: string | null;
 };
 
 function initials(name: string) {
@@ -22,17 +23,24 @@ function initials(name: string) {
 
 export default function AgentsTable({ agents }: { agents: Agent[] }) {
   const [q, setQ] = useState("");
+  const [country, setCountry] = useState("");
+
+  const countries = useMemo(
+    () => [...new Set(agents.map((a) => a.country).filter(Boolean) as string[])].sort(),
+    [agents]
+  );
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return agents;
-    return agents.filter((a) =>
-      [a.name, a.agency ?? "", ...(a.regions ?? []), ...(a.specialisms ?? [])]
+    return agents.filter((a) => {
+      if (country && a.country !== country) return false;
+      if (!needle) return true;
+      return [a.name, a.agency ?? "", a.country ?? "", ...(a.regions ?? []), ...(a.specialisms ?? [])]
         .join(" ")
         .toLowerCase()
-        .includes(needle)
-    );
-  }, [agents, q]);
+        .includes(needle);
+    });
+  }, [agents, q, country]);
 
   return (
     <>
@@ -57,16 +65,28 @@ export default function AgentsTable({ agents }: { agents: Agent[] }) {
             className="w-full rounded-[10px] border border-line bg-surface py-2.5 pl-10 pr-3 text-[13.5px] outline-none focus:border-accent"
           />
         </div>
+        <select
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          className="rounded-[10px] border border-line bg-surface py-2.5 px-3 text-[13.5px] outline-none focus:border-accent"
+        >
+          <option value="">All countries</option>
+          {countries.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
         <span className="text-[12.5px] text-muted">
           {filtered.length} of {agents.length} agents
         </span>
       </div>
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-surface">
-        <div className="hidden grid-cols-[2fr_1.2fr_1fr_1.4fr_auto] gap-4 border-b border-line px-6 py-3 text-[12px] font-bold uppercase tracking-wide text-muted sm:grid">
+        <div className="hidden grid-cols-[2fr_1.2fr_0.9fr_1.4fr_auto] gap-4 border-b border-line px-6 py-3 text-[12px] font-bold uppercase tracking-wide text-muted sm:grid">
           <div>Name</div>
           <div>Agency</div>
-          <div>Region</div>
+          <div>Country</div>
           <div>Specialism</div>
           <div />
         </div>
@@ -74,7 +94,7 @@ export default function AgentsTable({ agents }: { agents: Agent[] }) {
           <Link
             key={agent.slug}
             href={`/agents/${agent.slug}`}
-            className={`flex flex-col gap-2 px-6 py-4 hover:bg-bg sm:grid sm:grid-cols-[2fr_1.2fr_1fr_1.4fr_auto] sm:items-center sm:gap-4 ${
+            className={`flex flex-col gap-2 px-6 py-4 hover:bg-bg sm:grid sm:grid-cols-[2fr_1.2fr_0.9fr_1.4fr_auto] sm:items-center sm:gap-4 ${
               i < filtered.length - 1 ? "border-b border-line" : ""
             }`}
           >
@@ -85,9 +105,7 @@ export default function AgentsTable({ agents }: { agents: Agent[] }) {
               <span className="text-[14.5px] font-bold">{agent.name}</span>
             </div>
             <div className="text-[13.5px] text-muted">{agent.agency ?? "Independent"}</div>
-            <div className="text-[13.5px] text-muted">
-              {(agent.regions ?? []).join(", ") || "—"}
-            </div>
+            <div className="text-[13.5px] text-muted">{agent.country ?? "—"}</div>
             <div className="flex flex-wrap gap-1.5">
               {(agent.specialisms ?? []).map((s) => (
                 <span

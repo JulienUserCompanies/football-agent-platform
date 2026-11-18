@@ -56,10 +56,11 @@ function LockBadge() {
 export default async function HomePage() {
   const supabase = await createClient();
 
-  const [{ count: agentCount }, { data: agencyRows }, { data: previewAgents }] =
+  const [{ count: agentCount }, { data: agencyRows }, { data: countryRows }, { data: previewAgents }] =
     await Promise.all([
       supabase.from("agents").select("*", { count: "exact", head: true }),
       supabase.from("agents").select("agency"),
+      supabase.from("agents").select("country"),
       supabase
         .from("agents")
         .select("name, agency, regions, specialisms")
@@ -69,6 +70,10 @@ export default async function HomePage() {
 
   const agencyCount = new Set(
     (agencyRows ?? []).map((r) => r.agency).filter(Boolean)
+  ).size;
+
+  const countryCount = new Set(
+    (countryRows ?? []).map((r) => r.country).filter(Boolean)
   ).size;
 
   const initials = (name: string) =>
@@ -130,7 +135,7 @@ export default async function HomePage() {
         />
         <div className="relative max-w-2xl">
           <div className="mb-4 text-xs font-bold tracking-[0.09em] text-[#7FE3AE]">
-            FIND YOUR AGENT, FA-VERIFIED
+            FIND YOUR AGENT, REGISTER-VERIFIED
           </div>
           <h1 className="mb-5 font-display text-5xl font-extrabold leading-[1.14] text-white">
             Find the right licensed agent — and know who you&rsquo;re{" "}
@@ -139,9 +144,9 @@ export default async function HomePage() {
           <p className="mb-8 max-w-xl text-base leading-relaxed text-[#C8E3D4]">
             AgentIndex helps clubs, agencies and families find a licensed
             football agent that fits — by region, agency and specialism —
-            then cross-checks them against the FA&rsquo;s public register, so
-            you know exactly who you&rsquo;re connecting with before you make
-            contact.
+            then cross-checks them against the national federation&rsquo;s
+            public register in their country, so you know exactly who
+            you&rsquo;re connecting with before you make contact.
           </p>
           <div className="mb-9 flex gap-3.5">
             <Link
@@ -162,7 +167,7 @@ export default async function HomePage() {
           </div>
           <div className="flex flex-wrap gap-7 text-[13px] font-semibold text-[#AFCCBD]">
             <span className="flex items-center gap-1.5">
-              <Check /> {agentCount ?? "—"} agents sourced from the FA register
+              <Check /> {agentCount ?? "—"} agents sourced from {countryCount || "4"} national registers
             </span>
             <span className="flex items-center gap-1.5">
               <Check /> Free to browse
@@ -181,8 +186,8 @@ export default async function HomePage() {
         >
           <StatTile label="Agents listed" value={String(agentCount ?? "—")} border />
           <StatTile label="Agencies represented" value={String(agencyCount || "—")} border />
-          <StatTile label="Register, re-checked monthly" value="FA" border />
-          <StatTile label="Coverage today, expanding" value="England" />
+          <StatTile label="Countries covered, expanding" value={String(countryCount || "4")} border />
+          <StatTile label="National federations" value="4" />
         </div>
       </div>
 
@@ -196,8 +201,8 @@ export default async function HomePage() {
             Find the right agent, then connect with confidence
           </h2>
           <p className="text-[15px] leading-relaxed text-muted">
-            Every listing starts from the FA&rsquo;s own public register —
-            not a scraped CV or a self-submitted profile.
+            Every listing starts from a national federation&rsquo;s own
+            public register — not a scraped CV or a self-submitted profile.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-7 md:grid-cols-3">
@@ -370,8 +375,9 @@ export default async function HomePage() {
             </span>
           </div>
           <p className="text-[13px] leading-relaxed text-muted">
-            The FA-register-verified directory of licensed football agents.
-            Working name — not a final brand.
+            The register-verified directory of licensed football agents,
+            across England, Ireland, the Netherlands and Italy. Working
+            name — not a final brand.
           </p>
         </div>
         <div className="flex gap-16">
@@ -394,8 +400,8 @@ export default async function HomePage() {
         </div>
       </div>
       <div className="border-t border-line px-14 py-5 text-center text-[12.5px] text-muted">
-        © 2026 AgentIndex. Agent data sourced from the FA&rsquo;s public
-        register of licensed football agents.
+        © 2026 AgentIndex. Agent data sourced from the FA, FAI, KNVB and
+        FIGC public registers of licensed football agents.
       </div>
     </div>
   );

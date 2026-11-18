@@ -5,7 +5,7 @@ export default async function AgentsPage() {
   const supabase = await createClient();
   const { data: agents } = await supabase
     .from("agents")
-    .select("slug, name, agency, regions, specialisms")
+    .select("slug, name, agency, regions, specialisms, country")
     .order("name");
 
   const rows = agents ?? [];
