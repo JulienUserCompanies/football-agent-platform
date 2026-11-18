@@ -31,6 +31,37 @@ function normalizeHeader(h: string) {
   return h.trim().toLowerCase().replace(/[\s-]+/g, "_");
 }
 
+// Dates can arrive as a real Date (xlsx with cellDates:true), an Excel
+// serial number (older files, or CSV content a spreadsheet app rewrote
+// with implicit date typing), or plain text already in a sane format.
+function toIsoDate(value: unknown): string {
+  if (value == null || value === "") return "";
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value === "number") {
+    // Excel serial date: days since 1899-12-30 (accounts for the
+    // historical leap-year bug baked into that epoch).
+    const epoch = Date.UTC(1899, 11, 30);
+    const ms = epoch + Math.round(value) * 86400000;
+    return new Date(ms).toISOString().slice(0, 10);
+  }
+  const s = String(value).trim();
+  // Numeric-looking string that slipped through as text (e.g. "46240.04").
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    const epoch = Date.UTC(1899, 11, 30);
+    const ms = epoch + Math.round(parseFloat(s)) * 86400000;
+    return new Date(ms).toISOString().slice(0, 10);
+  }
+  // dd/mm/yyyy -> yyyy-mm-dd
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) {
+    const [, d, m, y] = dmy;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  return s;
+}
+
 export default function AdminImportPage() {
   const [passcode, setPasscode] = useState("");
   const [fileName, setFileName] = useState("");
@@ -47,7 +78,11 @@ export default function AdminImportPage() {
     setFileName(file.name);
     try {
       const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
+      // cellDates: true makes XLSX hand back real Date objects for date
+      // cells instead of raw Excel serial numbers (e.g. 46240.0417) when
+      // the file has passed through Excel/Numbers as .xlsx — otherwise
+      // date columns like checked_on come through as that serial number.
+      const wb = XLSX.read(buf, { type: "array", cellDates: true });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
 
@@ -65,11 +100,17 @@ export default function AdminImportPage() {
       setMissingRequired(missing);
       setHeaders(normalizedHeaders.filter((h) => EXPECTED_COLUMNS.includes(h)));
 
+      const DATE_COLUMNS = new Set(["checked_on", "minors_authorised_until"]);
+
       const normalizedRows: ParsedRow[] = json.map((r) => {
         const out: ParsedRow = {};
         for (const [raw, norm] of headerMap.entries()) {
-          if (EXPECTED_COLUMNS.includes(norm)) {
-            out[norm] = String(r[raw] ?? "").trim();
+          if (!EXPECTED_COLUMNS.includes(norm)) continue;
+          const value = r[raw];
+          if (DATE_COLUMNS.has(norm)) {
+            out[norm] = toIsoDate(value);
+          } else {
+            out[norm] = String(value ?? "").trim();
           }
         }
         return out;
